@@ -14,6 +14,6 @@ in the config.ini file, fill these informations
 
 ## Extensions  
 Install extensions: 
- -pdfplumber
- -python-docx  
+ - pdfplumber
+ - python-docx  
 and others if missing
