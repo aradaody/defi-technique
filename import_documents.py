@@ -27,7 +27,6 @@ def get_last_upload_id(cursor):
     return result
 
 def get_patient_num(IPP, cursor):
-    print(IPP)
     queries_patient_num = "SELECT PATIENT_NUM FROM DWH_PATIENT_IPPHIST where HOSPITAL_PATIENT_ID = ?"
     cursor.execute(queries_patient_num, [IPP])
     result = cursor.fetchone()
