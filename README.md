@@ -20,5 +20,5 @@ and others if missing
 
 ## Execution
 
-Exercice 1: lancer import_patients.py  
-Exercice 2: lancer import_documents.py
+Exercice 1: execute import_patients.py  
+Exercice 2: execute import_documents.py
