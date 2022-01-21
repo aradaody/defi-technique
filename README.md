@@ -17,3 +17,8 @@ Install extensions:
  - pdfplumber
  - python-docx  
 and others if missing
+
+## Execution
+
+Exercice 1: lancer import_patients.py  
+Exercice 2: lancer import_documents.py
