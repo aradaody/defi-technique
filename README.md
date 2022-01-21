@@ -10,7 +10,7 @@ in the config.ini file, fill these informations
     If we have more than "MATCHING_COUNT" columns with identical values when comparing to existing patient it's a duplicated patient 
  - SEPARATOR = separator of the day, month, year in date format
 
-- I created a trigger from script.sql in the database  
+- I created a trigger "CHANGE_MASTER_PATIENT_ID" from script.sql in the database  
 
 ## Extensions  
 Install extensions: 

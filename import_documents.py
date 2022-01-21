@@ -23,6 +23,17 @@ queries_insert = f"INSERT INTO DWH_DOCUMENT ({columns_to_str}) VALUES ({params_t
 
 
 def get_last_upload_id(cursor):
+    """
+    Return new upload id for setting in DWH_DOCUMENT
+    depending on the last upload id inserted in table DWH_DOCUMENT
+
+    Parameters:
+       cursor (sqlite Cursor): from connection opened outside of the function
+
+    Returns:
+      result (int): The upload id 
+
+    """
     queries = "SELECT MAX(UPLOAD_ID) FROM DWH_DOCUMENT"
     cursor.execute(queries)
     result = cursor.fetchone()[0]
@@ -34,6 +45,17 @@ def get_last_upload_id(cursor):
 
 
 def get_patient_num(IPP, cursor):
+    """
+    Return PATIENT_NUM corresponding on the HOSPITAL_PATIENT_ID
+
+    Parameters:
+        IPP (str): HOSPITAL_PATIENT_ID
+       cursor (sqlite Cursor): from connection opened outside of the function
+
+    Returns:
+      result (int): PATIENT_NUM if found else None
+
+    """
     queries_patient_num = "SELECT PATIENT_NUM FROM DWH_PATIENT_IPPHIST where HOSPITAL_PATIENT_ID = ?"
     cursor.execute(queries_patient_num, [IPP])
     result = cursor.fetchone()
@@ -43,6 +65,18 @@ def get_patient_num(IPP, cursor):
 
 
 def extract_document_informations(file_property, file_details, cursor):
+    """
+    Return all found informations of the document
+
+    Parameters:
+        file_property (tuple): stocking filename and extension ('filename','extension')
+        file_details (list): stocking the patient IPP and DOC_ID [IPP,DOC_ID]
+        cursor (sqlite Cursor): from connection opened outside of the function
+
+    Returns:
+      document (dict): document informations
+
+    """
     # content of the file
     document = {
         "PATIENT_NUM": "",
@@ -119,7 +153,7 @@ def extract_document_informations(file_property, file_details, cursor):
 # ETL Pipeline
 try:
     print("Connection opened")
-    connection = sqlite3.connect('drwh.db')
+    connection = sqlite3.connect(config['SOURCES']['DATABASE_PATH'])
     cursor = connection.cursor()
     # documents to insert
     documents = []
