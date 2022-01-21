@@ -11,4 +11,9 @@ in the config.ini file, fill these informations
  - SEPARATOR = separator of the day, month, year in date format
 
 - I created a trigger from script.sql in the database  
-!!Install extensions: pdfplumber, python-docx ... and others if missing
+
+## Extensions  
+Install extensions: 
+ -pdfplumber
+ -python-docx  
+and others if missing

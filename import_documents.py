@@ -14,7 +14,13 @@ config.read('config.ini')
 files = os.listdir(config['SOURCES']['FILEPATH_DOCUMENTS'])
 
 # preparing queries
-queries_insert = "INSERT INTO DWH_DOCUMENT (PATIENT_NUM, TITLE, DOCUMENT_ORIGIN_CODE, DOCUMENT_DATE, ID_DOC_SOURCE, DOCUMENT_TYPE, DISPLAYED_TEXT, AUTHOR, UPDATE_DATE, UPLOAD_ID) VALUES (?,?,?,?,?,?,?,?,?,?)"
+colums_name = ["PATIENT_NUM", "TITLE", "DOCUMENT_ORIGIN_CODE", "DOCUMENT_DATE",
+               "ID_DOC_SOURCE", "DOCUMENT_TYPE", "DISPLAYED_TEXT", "AUTHOR", "UPDATE_DATE", "UPLOAD_ID"]
+columns_to_str = ",".join(colums_name)
+values_parameters = ["?"] * len(colums_name)
+params_to_str = ",".join(values_parameters)
+queries_insert = f"INSERT INTO DWH_DOCUMENT ({columns_to_str}) VALUES ({params_to_str})"
+
 
 def get_last_upload_id(cursor):
     queries = "SELECT MAX(UPLOAD_ID) FROM DWH_DOCUMENT"
@@ -25,6 +31,7 @@ def get_last_upload_id(cursor):
     else:
         result += 1
     return result
+
 
 def get_patient_num(IPP, cursor):
     queries_patient_num = "SELECT PATIENT_NUM FROM DWH_PATIENT_IPPHIST where HOSPITAL_PATIENT_ID = ?"
@@ -38,14 +45,14 @@ def get_patient_num(IPP, cursor):
 def extract_document_informations(file_property, file_details, cursor):
     # content of the file
     document = {
-        "PATIENT_NUM" : "",
-        "TITLE" : "",
-        "DOCUMENT_ORIGIN_CODE" : "",
-        "DOCUMENT_DATE" : "",
-        "ID_DOC_SOURCE" : "",
-        "DOCUMENT_TYPE" : "",
-        "DISPLAYED_TEXT" : "",
-        "AUTHOR" : ""
+        "PATIENT_NUM": "",
+        "TITLE": "",
+        "DOCUMENT_ORIGIN_CODE": "",
+        "DOCUMENT_DATE": "",
+        "ID_DOC_SOURCE": "",
+        "DOCUMENT_TYPE": "",
+        "DISPLAYED_TEXT": "",
+        "AUTHOR": ""
     }
     IPP = file_details[0]
     document["PATIENT_NUM"] = get_patient_num(IPP, cursor)
@@ -53,11 +60,13 @@ def extract_document_informations(file_property, file_details, cursor):
     if file_property[1] == ".pdf":
         document["DOCUMENT_TYPE"] = "PDF"
         document["DOCUMENT_ORIGIN_CODE"] = "DOSSIER_PATIENT"
-        document["DISPLAYED_TEXT"] = utils.extract_text_pdf(config["SOURCES"]["FILEPATH_DOCUMENTS"]+"/"+file).strip()
+        document["DISPLAYED_TEXT"] = utils.extract_text_pdf(
+            config["SOURCES"]["FILEPATH_DOCUMENTS"]+"/"+file).strip()
     elif file_property[1] == ".docx":
         document["DOCUMENT_TYPE"] = "DOCX"
         document["DOCUMENT_ORIGIN_CODE"] = "RADIOLOGIE_SOFTWARE"
-        document["DISPLAYED_TEXT"] = utils.extract_text_docx(config["SOURCES"]["FILEPATH_DOCUMENTS"]+"/"+file).strip()
+        document["DISPLAYED_TEXT"] = utils.extract_text_docx(
+            config["SOURCES"]["FILEPATH_DOCUMENTS"]+"/"+file).strip()
 
     # ------------------------ TITLE -------------------------------
     # Trying to find title if it's like "Compte rendu..."
@@ -72,18 +81,20 @@ def extract_document_informations(file_property, file_details, cursor):
                 break
         # find document_date in the title
         # format dd-MM-YYYY or dd/MM/YYYY
-        search_date_format_dmy = re.search(r'\d{2}(-|/)\d{2}(-|/)\d{4}', document["TITLE"])
+        search_date_format_dmy = re.search(
+            r'\d{2}(-|/)\d{2}(-|/)\d{4}', document["TITLE"])
         if search_date_format_dmy is not None:
             document["DOCUMENT_DATE"] = search_date_format_dmy.group()
         # format YYYY-MM-dd or YYYY/MM/dd
         else:
-            search_date_format_ymd = re.search(r'\d{4}(-|/)\d{2}(-|/)\d{2}', document["TITLE"])
+            search_date_format_ymd = re.search(
+                r'\d{4}(-|/)\d{2}(-|/)\d{2}', document["TITLE"])
             if search_date_format_ymd is not None:
                 document["DOCUMENT_DATE"] = search_date_format_ymd.group()
     # Find title "Ordonnance"
     else:
         title_find = re.findall(
-            r"(?<=Ordonnance).*?(?=\r\n|\r|\n)",document["DISPLAYED_TEXT"], re.IGNORECASE)
+            r"(?<=Ordonnance).*?(?=\r\n|\r|\n)", document["DISPLAYED_TEXT"], re.IGNORECASE)
         if len(title_find):
             document["TITLE"] = "Ordonnance "+title_find[0].strip()
             # find date in the header "Paris le XXXXX,""
@@ -92,17 +103,18 @@ def extract_document_informations(file_property, file_details, cursor):
             if search_date_format_dmy is not None:
                 document["DOCUMENT_DATE"] = search_date_format_dmy.group()
             else:
-                search_date_format_ymd = re.search(r'(?<=le\s)\d{4}(-|/)\d{2}(-|/)\d{2}?(?=\,)', document["DISPLAYED_TEXT"], re.IGNORECASE)
+                search_date_format_ymd = re.search(
+                    r'(?<=le\s)\d{4}(-|/)\d{2}(-|/)\d{2}?(?=\,)', document["DISPLAYED_TEXT"], re.IGNORECASE)
                 if search_date_format_ymd is not None:
                     document["DOCUMENT_DATE"] = search_date_format_ymd.group()
-
 
     # --------------------- AUTHOR --------------------
     last_line_text = document["DISPLAYED_TEXT"].strip().split("\n")
     if re.search('Dr', last_line_text[-1], re.IGNORECASE) is not None:
         document["AUTHOR"] = last_line_text[-1].strip()
-        
+
     return document
+
 
 # ETL Pipeline
 try:
@@ -122,7 +134,8 @@ try:
         # file with invalid filename (not IPP_IDDOCUMENT) not treated
         if len(file_details) <= 1:
             continue
-        row = list(extract_document_informations(file_property,file_details,cursor).values())
+        row = list(extract_document_informations(
+            file_property, file_details, cursor).values())
         row.extend([UPDATE_DATE, UPLOAD_ID])
         documents.append(row)
     print("Inserting data...")

@@ -30,7 +30,7 @@ if len(bad_headers) > 0:
 UPLOAD_ID = 0
 UPDATE_DATE = date.today()
 
-# Stocking excel rows which won't be inserted in the table DWH_PATIENT 
+# Stocking excel rows which won't be inserted in the table DWH_PATIENT
 columns_name = data_patients.columns.tolist()
 # add column identifying why the row was not inserted
 columns_name.append('ANOMALY')
@@ -44,30 +44,31 @@ columns_to_insert = data_patients.columns.tolist()
 columns_to_insert.remove('HOSPITAL_PATIENT_ID')
 
 # Preparing queries
-values_parameters = ["?"] * len(columns_to_insert)
-params_to_str = ",".join(values_parameters)
-columns_to_str = ",".join(columns_to_insert)
-
-queries_insert = "INSERT INTO  DWH_PATIENT (" + \
-    columns_to_str+", UPLOAD_ID, UPDATE_DATE) values ("+params_to_str+",?,?)"
-
 queries_update = "UPDATE DWH_PATIENT SET "
 for column in columns_to_insert:
     queries_update += column + " = ? , "
 queries_update += "UPLOAD_ID = ? , UPDATE_DATE = ? WHERE PATIENT_NUM = ?"
 
+columns_to_insert.extend(["UPLOAD_ID", "UPDATE_DATE"])
+values_parameters = ["?"] * len(columns_to_insert)
+params_to_str = ",".join(values_parameters)
+columns_to_str = ",".join(columns_to_insert)
+
+queries_insert = f"INSERT INTO  DWH_PATIENT ({columns_to_str}) values ({params_to_str})"
+
+
 # Use some columns for checking if same patient
-queries_search_duplicates = "SELECT PATIENT_NUM, " \
-    "case when LASTNAME like ? then 1 else 0 end + " \
-    "case when FIRSTNAME like ? then 1 else 0 end +"\
-    "case when BIRTH_DATE like ? then 1 else 0 end +"\
-    "case when PHONE_NUMBER like ? then 1 else 0 end +"\
-    "case when MAIDEN_NAME like ? then 1 else 0 end +"\
-    "case when RESIDENCE_CITY like ? then 1 else 0 end +"\
-    "case when RESIDENCE_COUNTRY like ? then 1 else 0 end +"\
-    "case when RESIDENCE_ADDRESS like ? then 1 else 0 end "\
-    "AS count "\
-    "FROM DWH_PATIENT where count >= ?"
+queries_search_duplicates = """SELECT PATIENT_NUM, 
+    case when LASTNAME like ? then 1 else 0 end + 
+    case when FIRSTNAME like ? then 1 else 0 end +
+    case when BIRTH_DATE like ? then 1 else 0 end +
+    case when PHONE_NUMBER like ? then 1 else 0 end +
+    case when MAIDEN_NAME like ? then 1 else 0 end +
+    case when RESIDENCE_CITY like ? then 1 else 0 end +
+    case when RESIDENCE_COUNTRY like ? then 1 else 0 end +
+    case when RESIDENCE_ADDRESS like ? then 1 else 0 end 
+    AS count FROM DWH_PATIENT where count >= ?
+"""
 
 
 def get_last_upload_id(cursor):
@@ -106,6 +107,7 @@ def insert_patient(row, cursor):
 def insert_patient_ipp_hist(cursor, patient_num, IPP):
     queries_add_ipp_hist = "INSERT INTO DWH_PATIENT_IPPHIST VALUES (?,?,?,?,?)"
     return cursor.execute(queries_add_ipp_hist, (patient_num, IPP, config['SOURCES']['ORIGIN_PATIENT_ID'], config['CONSTANT']['LAST_MASTER_PATIENT_ID'], UPLOAD_ID))
+
 
 # ETL Pipeline
 try:
@@ -167,4 +169,5 @@ finally:
         print("The SQLite connection is closed")
 
 # Export invalid datas
-not_clean_datas.to_excel("Error_integration"+UPDATE_DATE.strftime('%Y-%m-%d')+".xlsx")
+not_clean_datas.to_excel(
+    "Error_integration"+UPDATE_DATE.strftime('%Y-%m-%d')+".xlsx")
