@@ -51,6 +51,7 @@ print("Reading file...")
 data_patients = pd.read_excel(config['SOURCES']['FILEPATH_PATIENT'], dtype={
                               'BIRTH_DATE': str, 'HOSPITAL_PATIENT_ID': str, "PHONE_NUMBER": str, "DEATH_DATE": str})
 
+
 # Get attributes of table DWH_PATIENT for checking that we have the right column names in the excel file
 # because we will use these attributes as standard key to treat the datas
 print("Checking headers...")
@@ -76,6 +77,7 @@ not_clean_datas = pd.DataFrame(columns=columns_name)
 print("Clean data")
 #  Change missing data to empty string and remove duplicates
 data_patients = data_patients.drop_duplicates().fillna("")
+
 # Get all columns which will be filled in the table DWH_PATIENT according to the excel file
 columns_to_insert = data_patients.columns.tolist()
 columns_to_insert.remove('HOSPITAL_PATIENT_ID')
@@ -246,105 +248,5 @@ finally:
         print("The SQLite connection is closed")
 
 # Export invalid datas
-not_clean_datas.to_excel(
-    "Error_integration"+UPDATE_DATE.strftime('%Y-%m-%d')+".xlsx")
-
-
-def get_last_upload_id(cursor):
-    queries = "SELECT MAX(UPLOAD_ID) FROM DWH_PATIENT"
-    cursor.execute(queries)
-    result = cursor.fetchone()[0]
-    if result is None:
-        result = 0
-    else:
-        result += 1
-    return result
-
-
-def insert_patient(row, cursor):
-    IPP = row["HOSPITAL_PATIENT_ID"]
-    values_to_insert = row.drop(labels=['HOSPITAL_PATIENT_ID'])
-    values_to_list = values_to_insert.values.tolist()
-    # search if patient already exist
-    cursor.execute(queries_search_duplicates, (row["LASTNAME"], row["FIRSTNAME"], row["BIRTH_DATE"], row["PHONE_NUMBER"],
-                   row["MAIDEN_NAME"], row["RESIDENCE_CITY"], row["RESIDENCE_COUNTRY"], row["RESIDENCE_ADDRESS"], int(config['DUPLICATION']['MATCHING_COUNT'])))
-    duplicates = cursor.fetchall()
-    # If patient exist
-    if len(duplicates) > 0:
-        patient_num = duplicates[0][0]
-        values_to_list.extend([UPLOAD_ID, UPDATE_DATE, patient_num])
-        # Update patient's informations
-        cursor.execute(queries_update, values_to_list)
-    else:
-        values_to_list.extend([UPLOAD_ID, UPDATE_DATE])
-        # Insert new patient
-        cursor.execute(queries_insert, values_to_list)
-        patient_num = cursor.lastrowid
-    insert_patient_ipp_hist(cursor, patient_num, IPP)
-
-
-def insert_patient_ipp_hist(cursor, patient_num, IPP):
-    queries_add_ipp_hist = "INSERT INTO DWH_PATIENT_IPPHIST VALUES (?,?,?,?,?)"
-    return cursor.execute(queries_add_ipp_hist, (patient_num, IPP, config['SOURCES']['ORIGIN_PATIENT_ID'], config['CONSTANT']['LAST_MASTER_PATIENT_ID'], UPLOAD_ID))
-
-
-# ETL Pipeline
-try:
-    connection = sqlite3.connect(config['SOURCES']['DATABASE_PATH'])
-    cursor = connection.cursor()
-    UPLOAD_ID = get_last_upload_id(cursor)
-    for index, row in data_patients.iterrows():
-        anomalies = ""
-        # ---------------------- LASTNAME CHECK ------------------------
-        if not utils.validate_varchar_no_digit(row["LASTNAME"]):
-            anomalies += "LASTNAME "
-        # ------------------------ FIRSTNAME CHECK ------------------------
-        if not utils.validate_varchar_no_digit(row["FIRSTNAME"]):
-            anomalies += "FIRSTNAME "
-        # ----------------------- BIRTH DATE CHECK -----------------------
-        if not utils.valid_date(row["BIRTH_DATE"], config['DATE']['FORMAT'], config['DATE']['SEPARATOR']):
-            anomalies += "BIRTH_DATE "
-        # ----------------------- HOPITAL PATIENT ID CHECK -------------------
-        if not row["HOSPITAL_PATIENT_ID"]:
-            anomalies += "HOSPITAL_PATIENT_ID "
-        # ----------------------- SEX CHECK -----------------------
-        if row["SEX"] != "F" and row["SEX"] != "M":
-            anomalies += "SEX "
-        # ----------------------- RESIDENCE_ADDRESS CHECK -----------------------
-        if not utils.valid_address(row["RESIDENCE_ADDRESS"]):
-            anomalies += "RESIDENCE_ADDRESS "
-        # ----------------------- PHONE_NUMBER CHECK -----------------------
-        if not utils.valid_phone_number(row["PHONE_NUMBER"]):
-            anomalies += "PHONE_NUMBER "
-        # ----------------------- RESIDENCE CITY CHECK -----------------------
-        if not utils.validate_varchar_no_digit(row["RESIDENCE_CITY"]):
-            anomalies += "RESIDENCE_CITY "
-        # ----------------------- RESIDENCE_COUNTRY CHECK -----------------------
-        if not utils.validate_varchar_no_digit(row["RESIDENCE_COUNTRY"]):
-            anomalies += "RESIDENCE_COUNTRY "
-        # ----------------------- DEATH DATE CHECK -----------------------
-        if row["DEATH_DATE"]:
-            if not utils.valid_date(row["DEATH_DATE"], config['DATE']['FORMAT'], config['DATE']['SEPARATOR']):
-                anomalies += "DEATH_DATE "
-        # Checking if row has not clean values
-        if anomalies:
-            row["ANOMALY"] = anomalies.strip().replace(" ", ",")
-            not_clean_datas = pd.concat([not_clean_datas, row.to_frame().T])
-        else:
-            insert_patient(row, cursor)
-        connection.commit()
-    print("Data integration finished...")
-
-except Exception as error:
-    print("An error occured !", error)
-finally:
-    if cursor:
-        cursor.close()
-        print("The Cursor is closed")
-    if connection:
-        connection.close()
-        print("The SQLite connection is closed")
-
-# Export invalid datas
-not_clean_datas.to_excel(config['OUTPUT']['FILEPATH_ERROR'] +
+not_clean_datas.to_excel(config["OUTPUT"]["FILEPATH_ERROR"] +
                          "Error_integration"+UPDATE_DATE.strftime('%Y-%m-%d')+".xlsx")

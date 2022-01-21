@@ -16,6 +16,7 @@ files = os.listdir(config['SOURCES']['FILEPATH_DOCUMENTS'])
 # preparing queries
 colums_name = ["PATIENT_NUM", "TITLE", "DOCUMENT_ORIGIN_CODE", "DOCUMENT_DATE",
                "ID_DOC_SOURCE", "DOCUMENT_TYPE", "DISPLAYED_TEXT", "AUTHOR", "UPDATE_DATE", "UPLOAD_ID"]
+
 columns_to_str = ",".join(colums_name)
 values_parameters = ["?"] * len(colums_name)
 params_to_str = ",".join(values_parameters)
@@ -91,6 +92,7 @@ def extract_document_informations(file_property, file_details, cursor):
     IPP = file_details[0]
     document["PATIENT_NUM"] = get_patient_num(IPP, cursor)
     document["ID_DOC_SOURCE"] = file_details[1]
+    # File property
     if file_property[1] == ".pdf":
         document["DOCUMENT_TYPE"] = "PDF"
         document["DOCUMENT_ORIGIN_CODE"] = "DOSSIER_PATIENT"
