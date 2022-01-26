@@ -40,48 +40,6 @@ data_patients = data_patients.drop_duplicates().fillna("")
 columns_to_insert = data_patients.columns.tolist()
 columns_to_insert.remove('HOSPITAL_PATIENT_ID')
 
-
-# Read configuration file
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-print('Integration starting...')
-# Read patient's data and specify some columns to be string for preventing python to convert values
-print("Reading file...")
-data_patients = pd.read_excel(config['SOURCES']['FILEPATH_PATIENT'], dtype={
-                              'BIRTH_DATE': str, 'HOSPITAL_PATIENT_ID': str, "PHONE_NUMBER": str, "DEATH_DATE": str})
-
-
-# Get attributes of table DWH_PATIENT for checking that we have the right column names in the excel file
-# because we will use these attributes as standard key to treat the datas
-print("Checking headers...")
-allows_header = utils.get_table_dwh_patient_attributes()
-# Get all invalid column names
-bad_headers = [
-    col for col in data_patients.columns if col not in allows_header]
-# Stop program if invalid column names
-if len(bad_headers) > 0:
-    print("Please change column names in the excel file with the used in table DWH_PATIENT")
-    quit()
-
-# Initialize variable
-UPLOAD_ID = 0
-UPDATE_DATE = date.today()
-
-# Stocking excel rows which won't be inserted in the table DWH_PATIENT
-columns_name = data_patients.columns.tolist()
-# add column identifying why the row was not inserted
-columns_name.append('ANOMALY')
-not_clean_datas = pd.DataFrame(columns=columns_name)
-
-print("Clean data")
-#  Change missing data to empty string and remove duplicates
-data_patients = data_patients.drop_duplicates().fillna("")
-
-# Get all columns which will be filled in the table DWH_PATIENT according to the excel file
-columns_to_insert = data_patients.columns.tolist()
-columns_to_insert.remove('HOSPITAL_PATIENT_ID')
-
 # Preparing queries
 queries_update = "UPDATE DWH_PATIENT SET "
 for column in columns_to_insert:
